@@ -107,11 +107,11 @@ def initialize_user(chat_id):
     try:
         with connection.cursor() as cursor:
             # Check if the chatid already exists
-            cursor.execute("SELECT chatid FROM user_scores WHERE chatid = %s", (chat_id,))
+            cursor.execute("SELECT chatid FROM users_scores WHERE chatid = %s", (chat_id,))
             result = cursor.fetchone()
             if not result:
                 # Insert a new record with chatid and score 0
-                cursor.execute("INSERT INTO user_scores (chatid, score) VALUES (%s, %s)", (chat_id, 0))
+                cursor.execute("INSERT INTO users_scores (chatid, score) VALUES (%s, %s)", (chat_id, 0))
                 connection.commit()
                 print(f"Initialized user with chatid {chat_id}")
 
