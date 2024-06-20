@@ -17,19 +17,12 @@ def lambda_handler(event, context):
     print("Received event: ", json.dumps(event, indent=4))
 
     try:
-        if 'message' not in event:
-            if 'body' in event:
-                body = json.loads(event['body'])
-                if 'message' not in body:
-                    raise KeyError("The 'message' key is missing in the event body")
-                message = body['message']
-            else:
-                raise KeyError("The 'message' key is missing in the event")
-        else:
-            message = event['message']
+        # Check if the message key is present in the event
+        message = get_message_from_event(event)
 
         chat_id = message['chat']['id']
 
+        # Connect to the database
         connection = pymysql.connect(
             host=rds_host,
             user=username,
@@ -39,10 +32,12 @@ def lambda_handler(event, context):
 
         try:
             with connection.cursor() as cursor:
-                sql = "SELECT medication_name, time FROM medications WHERE phone_number = %s"
+                # Query to fetch medication details
+                sql = "SELECT medication_name, time FROM medreminder WHERE chatid = %s"
                 cursor.execute(sql, (chat_id,))
                 results = cursor.fetchall()
 
+            # Create the summary message
             if results:
                 summary_message = "Here is a summary of your medications:\n"
                 for row in results:
@@ -50,11 +45,15 @@ def lambda_handler(event, context):
             else:
                 summary_message = "You have no medications saved."
 
+            # Send the summary message to the user
             send_telegram_message(telegram_token, chat_id, summary_message)
 
-        except Exception as e:
-            print(f"Error: {str(e)}")
-
+        except pymysql.MySQLError as e:
+            print(f"MySQL Error: {str(e)}")
+            return {
+                'statusCode': 500,
+                'body': json.dumps(f"MySQL Error: {str(e)}")
+            }
         finally:
             connection.close()
 
@@ -76,6 +75,16 @@ def lambda_handler(event, context):
             'statusCode': 500,
             'body': json.dumps(f"Internal server error: {str(e)}")
         }
+
+def get_message_from_event(event):
+    """Extract the message from the incoming event"""
+    if 'message' in event:
+        return event['message']
+    if 'body' in event:
+        body = json.loads(event['body'])
+        if 'message' in body:
+            return body['message']
+    raise KeyError("The 'message' key is missing in the event")
 
 def send_telegram_message(token, chat_id, message):
     url = f"https://api.telegram.org/bot{token}/sendMessage"

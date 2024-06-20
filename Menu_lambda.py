@@ -1,6 +1,7 @@
 import json
 import os
 import boto3
+import pymysql
 import requests
 
 def lambda_handler(event, context):
@@ -13,8 +14,9 @@ def lambda_handler(event, context):
         chat_id = message['chat']['id']
         text = message['text']
 
-        # Determine the appropriate action based on the message text
+        # Handle /start command
         if text == "/start":
+            initialize_user(chat_id)
             send_telegram_message(os.environ['TELEGRAM_TOKEN'], chat_id, 
                 "Hello! Welcome to the MedReminder bot. Use /add to add a medication or /summary to get a summary of your medications.")
             return response(200, 'Start message sent successfully!')
@@ -76,7 +78,7 @@ def invoke_lambda(function_name, event):
     lambda_client = boto3.client('lambda')
     response = lambda_client.invoke(
         FunctionName=function_name,
-        InvocationType='Event',
+        InvocationType='Event',  # Asynchronous invocation
         Payload=json.dumps(event)
     )
     print(f"Invoked function {function_name}, response: {response}")
@@ -86,3 +88,34 @@ def response(status_code, message):
         'statusCode': status_code,
         'body': json.dumps(message)
     }
+
+def initialize_user(chat_id):
+    # Database connection details
+    rds_host = os.environ['RDS_HOST']
+    username = os.environ['RDS_USERNAME']
+    password = os.environ['RDS_PASSWORD']
+    db_name = os.environ['RDS_DB_NAME']
+
+    # Connect to the database
+    connection = pymysql.connect(
+        host=rds_host,
+        user=username,
+        password=password,
+        db=db_name
+    )
+
+    try:
+        with connection.cursor() as cursor:
+            # Check if the chatid already exists
+            cursor.execute("SELECT chatid FROM user_scores WHERE chatid = %s", (chat_id,))
+            result = cursor.fetchone()
+            if not result:
+                # Insert a new record with chatid and score 0
+                cursor.execute("INSERT INTO user_scores (chatid, score) VALUES (%s, %s)", (chat_id, 0))
+                connection.commit()
+                print(f"Initialized user with chatid {chat_id}")
+
+    except pymysql.MySQLError as e:
+        print(f"MySQL Error: {str(e)}")
+    finally:
+        connection.close()
