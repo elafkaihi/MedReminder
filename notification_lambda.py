@@ -28,18 +28,32 @@ def lambda_handler(event, context):
     try:
         with connection.cursor() as cursor:
             # Query to fetch medications to be taken in the current hour
-            sql = "SELECT phone_number, medication_name FROM medications WHERE time >= %s AND time < %s"
+            sql = """
+            SELECT id, phone_number, medication_name 
+            FROM medications 
+            WHERE time >= %s AND time < %s
+            """
             cursor.execute(sql, (current_hour, next_hour))
             results = cursor.fetchall()
             
             # Sending messages via Telegram
             for result in results:
+                med_id = result['id']
                 chat_id = result['phone_number']
                 medication_name = result['medication_name']
-                message_body = f"Hey, it's time to take your {medication_name}."
+                message_body = f"Hey, it's time to take your {medication_name}. Please confirm with 'yes' or 'no'."
                 
                 send_telegram_message(telegram_token, chat_id, message_body)
                 print(f"Sent message to {chat_id}: {message_body}")
+                
+                # Update the notification status and timestamp
+                update_sql = """
+                UPDATE medications 
+                SET notification_status = 'pending', notification_timestamp = NOW() 
+                WHERE id = %s
+                """
+                cursor.execute(update_sql, (med_id,))
+                connection.commit()
     
     except Exception as e:
         print(f"Error: {str(e)}")
