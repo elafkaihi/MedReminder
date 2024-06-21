@@ -5,7 +5,7 @@ import datetime
 import requests
 
 def lambda_handler(event, context):
-    # Database connection details
+    # Database connection details // medremindeer.medreminder
     rds_host = os.environ['RDS_HOST']
     username = os.environ['RDS_USERNAME']
     password = os.environ['RDS_PASSWORD']

@@ -31,7 +31,7 @@ def lambda_handler(event, context):
         with connection.cursor() as cursor:
             # Check if there is a pending notification
             sql = """
-            SELECT id, medication_name 
+            SELECT id, user_id, medication_name 
             FROM medications 
             WHERE phone_number = %s AND notification_status = 'pending'
             """
@@ -40,28 +40,41 @@ def lambda_handler(event, context):
             
             if result:
                 med_id = result['id']
+                user_id = result['user_id']
                 medication_name = result['medication_name']
                 
                 if text == 'yes':
-                    # Update the notification status to confirmed
-                    update_sql = """
+                    # Update the notification status to confirmed and increment the user's score
+                    update_med_sql = """
                     UPDATE medications 
                     SET notification_status = 'confirmed' 
                     WHERE id = %s
                     """
-                    cursor.execute(update_sql, (med_id,))
+                    update_user_sql = """
+                    UPDATE users 
+                    SET user_score = user_score + 1 
+                    WHERE id = %s
+                    """
+                    cursor.execute(update_med_sql, (med_id,))
+                    cursor.execute(update_user_sql, (user_id,))
                     connection.commit()
-                    send_telegram_message(telegram_token, chat_id, f"Great! You've confirmed taking your {medication_name}.")
+                    send_telegram_message(telegram_token, chat_id, f"Great! You've confirmed taking your {medication_name}. Your score has been increased by 1.")
                 elif text == 'no':
-                    # Update the notification status to missed
-                    update_sql = """
+                    # Update the notification status to missed and decrement the user's score
+                    update_med_sql = """
                     UPDATE medications 
                     SET notification_status = 'missed' 
                     WHERE id = %s
                     """
-                    cursor.execute(update_sql, (med_id,))
+                    update_user_sql = """
+                    UPDATE users 
+                    SET user_score = user_score - 1 
+                    WHERE id = %s
+                    """
+                    cursor.execute(update_med_sql, (med_id,))
+                    cursor.execute(update_user_sql, (user_id,))
                     connection.commit()
-                    send_telegram_message(telegram_token, chat_id, f"Please remember to take your {medication_name} as soon as possible.")
+                    send_telegram_message(telegram_token, chat_id, f"Please remember to take your {medication_name} as soon as possible. Your score has been decreased by 1.")
                 else:
                     send_telegram_message(telegram_token, chat_id, "Please respond with 'yes' or 'no'.")
             else:
