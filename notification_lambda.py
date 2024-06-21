@@ -29,7 +29,7 @@ def lambda_handler(event, context):
         with connection.cursor() as cursor:
             # Query to fetch medications to be taken in the current hour
             sql = """
-            SELECT id, phone_number, medication_name 
+            SELECT id, user_id, phone_number, medication_name 
             FROM medications 
             WHERE time >= %s AND time < %s
             """
@@ -39,6 +39,7 @@ def lambda_handler(event, context):
             # Sending messages via Telegram
             for result in results:
                 med_id = result['id']
+                user_id = result['user_id']
                 chat_id = result['phone_number']
                 medication_name = result['medication_name']
                 message_body = f"Hey, it's time to take your {medication_name}. Please confirm with 'yes' or 'no'."
