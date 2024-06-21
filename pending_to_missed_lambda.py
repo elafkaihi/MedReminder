@@ -18,13 +18,13 @@ def lambda_handler(event, context):
         db=db_name
     )
     
-    two_minutes_ago = (datetime.datetime.now() - datetime.timedelta(minutes=2)).strftime('%Y-%m-%d %H:%M:%S')
+    two_minutes_ago = (datetime.datetime.now() - datetime.timedelta(minutes=15)).strftime('%Y-%m-%d %H:%M:%S')
     
     try:
         with connection.cursor() as cursor:
             # Query to fetch medications with pending notifications older than 2 minutes
             sql = """
-            SELECT id, phone_number, medication_name 
+            SELECT id, user_id, phone_number, medication_name 
             FROM medications 
             WHERE notification_status = 'pending' AND notification_timestamp <= %s
             """
@@ -33,20 +33,27 @@ def lambda_handler(event, context):
             
             for result in results:
                 med_id = result['id']
+                user_id = result['user_id']
                 chat_id = result['phone_number']
                 medication_name = result['medication_name']
                 
-                # Update the notification status to missed
-                update_sql = """
+                # Update the notification status to missed and decrement the user's score
+                update_med_sql = """
                 UPDATE medications 
                 SET notification_status = 'missed' 
                 WHERE id = %s
                 """
-                cursor.execute(update_sql, (med_id,))
+                update_user_sql = """
+                UPDATE users 
+                SET user_score = user_score - 1 
+                WHERE id = %s
+                """
+                cursor.execute(update_med_sql, (med_id,))
+                cursor.execute(update_user_sql, (user_id,))
                 connection.commit()
                 
                 # Send a message to the user
-                send_telegram_message(os.environ['TELEGRAM_TOKEN'], chat_id, f"You missed taking your {medication_name}. Please remember to take it as soon as possible.")
+                send_telegram_message(os.environ['TELEGRAM_TOKEN'], chat_id, f"You missed taking your {medication_name}. Your score has been decreased by 1. Please remember to take it as soon as possible.")
                 print(f"Marked medication {medication_name} as missed for chat ID {chat_id}")
     
     except Exception as e:
