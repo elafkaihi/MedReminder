@@ -2,7 +2,7 @@ import pymysql
 import json
 import os
 import datetime
-from twilio.rest import Client
+import requests
 
 def lambda_handler(event, context):
     # Database connection details
@@ -11,10 +11,8 @@ def lambda_handler(event, context):
     password = os.environ['RDS_PASSWORD']
     db_name = os.environ['RDS_DB_NAME']
     
-    # Twilio credentials
-    twilio_account_sid = os.environ['TWILIO_ACCOUNT_SID']
-    twilio_auth_token = os.environ['TWILIO_AUTH_TOKEN']
-    twilio_phone_number = os.environ['TWILIO_PHONE_NUMBER']
+    # Telegram Bot API details
+    telegram_token = os.environ['TELEGRAM_TOKEN']
 
     # Connect to the database
     connection = pymysql.connect(
@@ -34,20 +32,14 @@ def lambda_handler(event, context):
             cursor.execute(sql, (current_hour, next_hour))
             results = cursor.fetchall()
             
-            # Sending messages via Twilio
-            client = Client(twilio_account_sid, twilio_auth_token)
+            # Sending messages via Telegram
             for result in results:
-                phone_number = result['phone_number']
+                chat_id = result['phone_number']
                 medication_name = result['medication_name']
-                message_body = f"Hey, your {medication_name} has to be taken now."
+                message_body = f"Hey, it's time to take your {medication_name}."
                 
-                message = client.messages.create(
-                    body=message_body,
-                    from_=twilio_phone_number,
-                    to=phone_number
-                )
-                
-                print(f"Sent message to {phone_number}: {message_body}")
+                send_telegram_message(telegram_token, chat_id, message_body)
+                print(f"Sent message to {chat_id}: {message_body}")
     
     except Exception as e:
         print(f"Error: {str(e)}")
@@ -59,3 +51,15 @@ def lambda_handler(event, context):
         'statusCode': 200,
         'body': json.dumps('Messages sent successfully!')
     }
+
+def send_telegram_message(token, chat_id, message):
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        'chat_id': chat_id,
+        'text': message
+    }
+    response = requests.post(url, json=payload)
+    if response.status_code != 200:
+        print(f"Failed to send message: {response.text}")
+    else:
+        print(f"Sent message: {message}")
