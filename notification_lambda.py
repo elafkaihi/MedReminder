@@ -29,8 +29,8 @@ def lambda_handler(event, context):
         with connection.cursor() as cursor:
             # Query to fetch medications to be taken in the current hour
             sql = """
-            SELECT id, user_id, phone_number, medication_name 
-            FROM medications 
+            SELECT id, chatid, medication_name 
+            FROM medreminder 
             WHERE time >= %s AND time < %s
             """
             cursor.execute(sql, (current_hour, next_hour))
@@ -38,10 +38,9 @@ def lambda_handler(event, context):
             
             # Sending messages via Telegram
             for result in results:
-                med_id = result['id']
-                user_id = result['user_id']
-                chat_id = result['phone_number']
-                medication_name = result['medication_name']
+                med_id = result[0]
+                chat_id = result[1]
+                medication_name = result[2]
                 message_body = f"Hey, it's time to take your {medication_name}. Please confirm with 'yes' or 'no'."
                 
                 send_telegram_message(telegram_token, chat_id, message_body)
@@ -49,7 +48,7 @@ def lambda_handler(event, context):
                 
                 # Update the notification status and timestamp
                 update_sql = """
-                UPDATE medications 
+                UPDATE medreminder 
                 SET notification_status = 'pending', notification_timestamp = NOW() 
                 WHERE id = %s
                 """
