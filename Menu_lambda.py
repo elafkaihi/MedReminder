@@ -26,6 +26,8 @@ def lambda_handler(event, context):
 
         elif text.startswith("/summary"):
             target_function = get_env_variable('SUMMARY_FUNCTION')
+        elif text == "yes" or text == "no":
+            target_function = get_env_variable('USER_ANSWER_LAMBDA')
 
         else:
             send_telegram_message(os.environ['TELEGRAM_TOKEN'], chat_id, 
