@@ -28,7 +28,8 @@ def lambda_handler(event, context):
             target_function = get_env_variable('SUMMARY_FUNCTION')
         elif text == "yes" or text == "no":
             target_function = get_env_variable('USER_ANSWER_LAMBDA')
-
+        elif text.startswith("/question"):
+            target_function = os.environ['CHATGPT_FUNCTION']
         else:
             send_telegram_message(os.environ['TELEGRAM_TOKEN'], chat_id, 
                 "Invalid command. Use /add or /summary.")
