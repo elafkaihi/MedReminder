@@ -67,7 +67,7 @@ def lambda_handler(event, context):
     try:
         with connection.cursor() as cursor:
             # Query to fetch all patient chat IDs
-            sql = "SELECT DISTINCT phone_number FROM medications"
+            sql = "SELECT DISTINCT chat_id FROM medreminder"
             cursor.execute(sql)
             results = cursor.fetchall()
             
