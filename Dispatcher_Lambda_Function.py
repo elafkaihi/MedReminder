@@ -20,16 +20,15 @@ def lambda_handler(event, context):
             send_telegram_message(os.environ['TELEGRAM_TOKEN'], chat_id, 
                 "Hello! Welcome to the MedReminder bot. Use /add to add a medication or /summary to get a summary of your medications.")
             return response(200, 'Start message sent successfully!')
-
         elif text.startswith("/add"):
             target_function = get_env_variable('ADD_DRUG_FUNCTION')
-
         elif text.startswith("/summary"):
             target_function = get_env_variable('SUMMARY_FUNCTION')
-        elif text == "yes" or text == "no":
-            target_function = get_env_variable('USER_ANSWER_LAMBDA')
         elif text.startswith("/question"):
             target_function = os.environ['CHATGPT_FUNCTION']
+        elif text == "yes" or text == "no":
+            target_function = get_env_variable('USER_ANSWER_LAMBDA')
+
         else:
             send_telegram_message(os.environ['TELEGRAM_TOKEN'], chat_id, 
                 "Invalid command. Use /add or /summary.")
