@@ -14,18 +14,18 @@ def lambda_handler(event, context):
     telegram_token = os.environ['TELEGRAM_TOKEN']
 
     # Log the incoming event for debugging purposes
-    print("Received event: ", json.dumps(event))
+    print("Received event: ", json.dumps(event, indent=4))
 
     try:
-        # Check if event has the necessary keys directly
-        if 'message' not in event:
-            raise KeyError("The 'message' key is missing in the event")
-
         # Parse the incoming message from Telegram
-        body = event  # Directly use event as it now matches the desired structure
-        print("Parsed body (JSON): ", body)
+        if 'body' in event:
+            body = json.loads(event['body'])
+            if 'message' not in body:
+                raise KeyError("The 'message' key is missing in the event body")
+            message = body['message']
+        else:
+            raise KeyError("The 'body' key is missing in the event")
 
-        message = body['message']
         chat_id = message['chat']['id']
         message_body = message['text']
 
@@ -55,9 +55,12 @@ def lambda_handler(event, context):
             # Send confirmation message back to the user
             send_telegram_message(telegram_token, chat_id, f"Medication '{medication_name}' has been saved for {time}.")
 
-        except Exception as e:
-            print(f"Error: {str(e)}")
-
+        except pymysql.MySQLError as e:
+            print(f"MySQL Error: {str(e)}")
+            return {
+                'statusCode': 500,
+                'body': json.dumps(f"MySQL Error: {str(e)}")
+            }
         finally:
             connection.close()
 
