@@ -33,7 +33,7 @@ def lambda_handler(event, context):
             sql = """
             SELECT medication_name, time 
             FROM medications 
-            WHERE phone_number = %s
+            WHERE chat_id = %s
             """
             cursor.execute(sql, (chat_id,))
             medications = cursor.fetchall()
@@ -74,7 +74,7 @@ def call_chatgpt_api(api_key, prompt):
         'Authorization': f'Bearer {api_key}',
     }
     data = {
-        'model': 'text-davinci-003',
+        'model': 'gpt-3.5-turbo',
         'prompt': prompt,
         'max_tokens': 150,
     }
