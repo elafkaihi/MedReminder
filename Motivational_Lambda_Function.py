@@ -25,6 +25,7 @@ def lambda_handler(event, context):
     try:
         response = s3.list_objects_v2(Bucket=s3_bucket, Prefix='quotes/')
         images = [content['Key'] for content in response.get('Contents', [])]
+        print(images)
     except Exception as e:
         print(f"Error listing objects in S3: {str(e)}")
         return {
@@ -67,7 +68,7 @@ def lambda_handler(event, context):
     try:
         with connection.cursor() as cursor:
             # Query to fetch all patient chat IDs
-            sql = "SELECT DISTINCT chat_id FROM medreminder"
+            sql = "SELECT DISTINCT chatid FROM medreminder"
             cursor.execute(sql)
             results = cursor.fetchall()
             
